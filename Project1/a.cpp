@@ -5,13 +5,19 @@ using namespace std;
 struct piece {
     
     vector<int> values;
+    bool used;
+    int id;
 
     piece() {
         values = vector<int>();
+        used = false;
+        id = -1;
     }
 
-    piece(int a, int b, int c, int d) {
+    piece(int a, int b, int c, int d, int _id) {
+        used = false;
         values = vector<int>{a, b, c, d};
+        id = _id;
     }
 
     void rotate() {
@@ -40,22 +46,30 @@ struct piece {
     }
 };
 
-void print_board(vector<vector<piece>>& board, int r, int c) {
+struct piece_comparator {
+
+    bool operator() (const piece& a, const piece& b) const {
+        return a.id < b.id;
+    }
+
+};
+
+void print_board(vector<vector<piece *>>& board, int r, int c) {
     for(int i = 0; i < r; i++) {
         for(int j = 0; j < c; j++) {
-            if(board[i][j].values.size() == 0)
+            if(board[i][j]->values.size() == 0)
                 cout << "_ _";
             else
-                cout << board[i][j].values[0] << " " << board[i][j].values[1];
+                cout << board[i][j]->values[0] << " " << board[i][j]->values[1];
             if(j < c - 1)
                 cout << "  ";
         }
         cout << endl;
         for(int j = 0; j < c; j++) {
-            if(board[i][j].values.size() == 0)
+            if(board[i][j]->values.size() == 0)
                 cout << "_ _";
             else
-                cout << board[i][j].values[3] << " " << board[i][j].values[2];
+                cout << board[i][j]->values[3] << " " << board[i][j]->values[2];
             if(j < c - 1)
                 cout << "  ";
         }
@@ -67,7 +81,9 @@ void print_board(vector<vector<piece>>& board, int r, int c) {
 
 bool solved = false;
 
-void bruteforce(vector<vector<piece>>& board, int x, int y, list<piece>& pieces, int r, int c, int direction) {
+piece * empty_piece = new piece();
+
+void bruteforce(map<piece, vector<piece *>, piece_comparator>& graph, vector<vector<piece*>>& board, int x, int y, int r, int c, int direction) {
     // direction 0: left
     // direction 1: right
     if(solved)
@@ -96,26 +112,27 @@ void bruteforce(vector<vector<piece>>& board, int x, int y, list<piece>& pieces,
         }
     }
 
-    auto it = pieces.begin();
-    auto after_it = pieces.begin();
-    for(size_t i = 0; i < pieces.size(); i++, it++) {
-        after_it++;
-        for(int j = 0; j < 4; j++) {
-            if((*it).match(board[max(nextX-1, 0)][nextY], 2) &&
-                (*it).match(board[nextX][max(nextY - 1, 0)], 0) &&
-                (*it).match(board[nextX][min(nextY + 1, c - 1)], 1)) {
-                
-                board[nextX][nextY] = *it;
-                pieces.erase(it);
-                bruteforce(board, nextX, nextY, pieces, r, c, direction);
-                if(solved)
-                    return;
-                pieces.insert(after_it, board[nextX][nextY]);
-                board[nextX][nextY] = piece();
+    for(size_t i = 0; i < graph[*board[x][y]].size(); i++) {
+        piece * current_piece = graph[*board[x][y]][i];
+        if(!current_piece->used) {
+            for(int j = 0; j < 4; j++) {
+                if(current_piece->match(*board[max(nextX-1, 0)][nextY], 2) &&
+                    current_piece->match(*board[nextX][max(nextY - 1, 0)], 0) &&
+                    current_piece->match(*board[nextX][min(nextY + 1, c- 1)], 1)) {
+                    
+                    current_piece->used = true;
+                    board[nextX][nextY] = current_piece;
+                    bruteforce(graph, board, nextX, nextY, r, c, direction);
+                    if(solved)
+                        return;
+                    board[nextX][nextY] = empty_piece;
+                    current_piece->used = false;
+                }
+                current_piece->rotate();
             }
-            (*it).rotate();
         }
     }
+
 }
 
 int main() {
@@ -127,21 +144,36 @@ int main() {
         solved = false;
         cin >> n >> r >> c;
 
-        list<piece> pieces;
-
-        vector<vector<piece>> board(r, vector<piece>(c));
+        vector<piece> pieces(n);
+        vector<vector<piece *>> board(r, vector<piece *>(c, empty_piece));
+        map<piece, vector<piece *>, piece_comparator> graph;
 
         for(int i = 0; i < n; i++) {
             cin >> w >> x >> y >> z;
+            pieces[i] = piece(w, x, y, z, i);
+            graph[pieces[i]] = vector<piece *>();
+        }
+        
+        for(int i = 0; i < n; i++){
+            for(int j = i + 1; j < n; j++){
+                for(int k = 0; k < 4; k++){
+                    if(pieces[i].match(pieces[j], 0) ||
+                        pieces[i].match(pieces[j], 1) ||
+                        pieces[i].match(pieces[j], 2) ||
+                        pieces[i].match(pieces[j], 3)) {
 
-            pieces.emplace_back(w, x, y, z);
+                        graph[pieces[i]].push_back(&pieces[j]);
+                        graph[pieces[j]].push_back(&pieces[i]);
+                    }
+                    pieces[i].rotate();
+                }
+            }
         }
 
-        board[0][0] = *pieces.begin();
-        
+        board[0][0] = &pieces[0];
+        pieces[0].used = true;
 
-        bruteforce(board, 0, 0, pieces, r, c, 0);
-        pieces.pop_front();
+        bruteforce(graph, board, 0, 0, r, c, 0);
         
         if(solved) {
             print_board(board, r, c);
