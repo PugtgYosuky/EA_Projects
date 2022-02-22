@@ -82,8 +82,9 @@ void print_board(vector<vector<piece *>>& board, int r, int c) {
 bool solved = false;
 
 piece * empty_piece = new piece();
+vector<piece> pieces;
 
-void bruteforce(map<piece, vector<piece *>, piece_comparator>& graph, vector<vector<piece*>>& board, int x, int y, int r, int c, int direction) {
+void bruteforce(map<piece, vector<piece *>, piece_comparator>& graph, vector<vector<piece*>>& board, int x, int y, int r, int c, int direction, int count) {
     // direction 0: left
     // direction 1: right
     if(solved)
@@ -112,6 +113,15 @@ void bruteforce(map<piece, vector<piece *>, piece_comparator>& graph, vector<vec
         }
     }
 
+    cout << count << endl;
+    for(int i = 0; i < r; i++) {
+        for(int j = 0; j < c; j++) {
+            if(board[i][j] != empty_piece) {
+                cout << i << " " << j << " " << board[i][j]->values[0] << " " << board[i][j]->values[1] << " " << board[i][j]->values[2] << " " << board[i][j]->values[3] << endl;
+            }
+        }
+    }
+
     for(size_t i = 0; i < graph[*board[x][y]].size(); i++) {
         piece * current_piece = graph[*board[x][y]][i];
         if(!current_piece->used) {
@@ -122,7 +132,7 @@ void bruteforce(map<piece, vector<piece *>, piece_comparator>& graph, vector<vec
                     
                     current_piece->used = true;
                     board[nextX][nextY] = current_piece;
-                    bruteforce(graph, board, nextX, nextY, r, c, direction);
+                    bruteforce(graph, board, nextX, nextY, r, c, direction, count + 1);
                     if(solved)
                         return;
                     board[nextX][nextY] = empty_piece;
@@ -144,7 +154,9 @@ int main() {
         solved = false;
         cin >> n >> r >> c;
 
-        vector<piece> pieces(n);
+        cout << r << " " << c << endl;
+
+        pieces = vector<piece>(n);
         vector<vector<piece *>> board(r, vector<piece *>(c, empty_piece));
         map<piece, vector<piece *>, piece_comparator> graph;
 
@@ -154,6 +166,7 @@ int main() {
             graph[pieces[i]] = vector<piece *>();
         }
         
+        bool impossible = false;
         for(int i = 0; i < n; i++){
             for(int j = i + 1; j < n; j++){
                 for(int k = 0; k < 4; k++){
@@ -163,20 +176,34 @@ int main() {
                         pieces[i].match(pieces[j], 3)) {
 
                         graph[pieces[i]].push_back(&pieces[j]);
-                        // graph[pieces[j]].push_back(&pieces[i]);
+                        graph[pieces[j]].push_back(&pieces[i]);
+
                     }
                     pieces[i].rotate();
                 }
+            }
+            if(graph[pieces[i]].size() == 0) {
+                impossible = true;
+                break;
             }
         }
 
         board[0][0] = &pieces[0];
         pieces[0].used = true;
 
-        bruteforce(graph, board, 0, 0, r, c, 0);
+        if(!impossible)
+            bruteforce(graph, board, 0, 0, r, c, 0, 1);
         
         if(solved) {
-            print_board(board, r, c);
+            // print_board(board, r, c);
+            cout << r*c << endl;
+            for(int i = 0; i < r; i++) {
+                for(int j = 0; j < c; j++) {
+                    if(board[i][j] != empty_piece) {
+                        cout << i << " " << j << " " << board[i][j]->values[0] << " " << board[i][j]->values[1] << " " << board[i][j]->values[2] << " " << board[i][j]->values[3] << endl;
+                    }
+                }
+            }
         } else
             cout << "impossible puzzle!" << endl;
     }
