@@ -39,10 +39,10 @@ class Piece():
 plt.gca().add_patch(Rectangle((0, 0), r/r, c/c, facecolor='none'))
 while True:
     try:
+        n = int(input())
         plt.clf()
         plt.xlim([0, c])
         plt.ylim([0, r])
-        n = int(input())
         pieces = []
         for i in range(n):
             x, y, x1, x2, x3, x4 = map(int, input().split())
@@ -50,6 +50,6 @@ while True:
         for piece in pieces:
             piece.draw()
         plt.show(block=False)
-        plt.pause(0.0001)
+        plt.pause(0.001)
     except Exception:
         plt.pause(20)
