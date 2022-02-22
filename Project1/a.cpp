@@ -163,7 +163,7 @@ int main() {
                         pieces[i].match(pieces[j], 3)) {
 
                         graph[pieces[i]].push_back(&pieces[j]);
-                        graph[pieces[j]].push_back(&pieces[i]);
+                        // graph[pieces[j]].push_back(&pieces[i]);
                     }
                     pieces[i].rotate();
                 }
