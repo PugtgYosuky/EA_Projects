@@ -67,9 +67,9 @@ void print_board(vector<vector<piece>>& board, int r, int c) {
 
 bool solved = false;
 
-void bruteforce(vector<vector<piece>>& board, int x, int y, vector<pair<piece, bool>>& pieces, int r, int c, int direction) {
-    // direction 0: esquerda
-    // direction 1: direita
+void bruteforce(vector<vector<piece>>& board, int x, int y, list<piece>& pieces, int r, int c, int direction) {
+    // direction 0: left
+    // direction 1: right
     if(solved)
         return;
     if((direction == 0 && x == r - 1 && y == c - 1) || (direction == 1 && x == r - 1 && y == 0)) {
@@ -96,26 +96,26 @@ void bruteforce(vector<vector<piece>>& board, int x, int y, vector<pair<piece, b
         }
     }
 
-    for(size_t i = 1; i < pieces.size(); i++) {
-        if(pieces[i].second) {
-            for(int j = 0; j < 4; j++) { //!!!!!!!!!!!!!!!!!!ISTO ESTAVA MAL!!!!!!!!!!!!!!!!!!
-                if(pieces[i].first.match(board[max(nextX-1, 0)][nextY], 2) &&
-                    pieces[i].first.match(board[nextX][max(nextY - 1, 0)], 0) &&
-                    pieces[i].first.match(board[nextX][min(nextY + 1, c- 1)], 1)) {
-                    
-                    pieces[i].second = false;
-                    board[nextX][nextY] = pieces[i].first;
-                    bruteforce(board, nextX, nextY, pieces, r, c, direction);
-                    if(solved)
-                        return;
-                    board[nextX][nextY] = piece();
-                    pieces[i].second = true;
-                }
-                pieces[i].first.rotate();
+    auto it = pieces.begin();
+    auto after_it = pieces.begin();
+    for(size_t i = 0; i < pieces.size(); i++, it++) {
+        after_it++;
+        for(int j = 0; j < 4; j++) {
+            if((*it).match(board[max(nextX-1, 0)][nextY], 2) &&
+                (*it).match(board[nextX][max(nextY - 1, 0)], 0) &&
+                (*it).match(board[nextX][min(nextY + 1, c - 1)], 1)) {
+                
+                board[nextX][nextY] = *it;
+                pieces.erase(it);
+                bruteforce(board, nextX, nextY, pieces, r, c, direction);
+                if(solved)
+                    return;
+                pieces.insert(after_it, board[nextX][nextY]);
+                board[nextX][nextY] = piece();
             }
+            (*it).rotate();
         }
     }
-
 }
 
 int main() {
@@ -127,20 +127,21 @@ int main() {
         solved = false;
         cin >> n >> r >> c;
 
-        vector<pair<piece, bool>> pieces(n);
+        list<piece> pieces;
 
         vector<vector<piece>> board(r, vector<piece>(c));
 
         for(int i = 0; i < n; i++) {
             cin >> w >> x >> y >> z;
 
-            pieces[i] = make_pair(piece(w, x, y, z), true);
+            pieces.emplace_back(w, x, y, z);
         }
 
-        board[0][0] = pieces[0].first;
-        pieces[0].second = false;
+        board[0][0] = *pieces.begin();
+        
 
         bruteforce(board, 0, 0, pieces, r, c, 0);
+        pieces.pop_front();
         
         if(solved) {
             print_board(board, r, c);
