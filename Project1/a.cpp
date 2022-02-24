@@ -4,46 +4,40 @@ using namespace std;
 
 struct piece {
     
-    vector<int> values;
+    vector<vector<int>> values;
+    vector<vector<pair<piece*, int>>> adj;
     bool used;
     int id;
+    int rotation; // 0 = top, 1 -> right, 2 -> bottom, 3 -> left
 
     piece() {
-        values = vector<int>();
+        values = vector<vector<int>>();
         used = false;
         id = -1;
+        rotation = 0;
+        adj = vector<vector<pair<piece*, int>>> (4);
     }
 
     piece(int a, int b, int c, int d, int _id) {
         used = false;
-        values = vector<int>{a, b, c, d};
+        values = vector<vector<int>>(4);
+        adj = vector<vector<pair<piece*, int>>> (4);
+        values[0] = vector<int>{a, b, c, d};
+        values[1] = vector<int>{b, c, d, a};
+        values[2] = vector<int>{c, d, a, b};
+        values[3] = vector<int>{d, a, b, c};
         id = _id;
+        rotation = 0;
     }
 
-    void rotate() {
-        // rotate 90
-        vector<int> aux(values);
-        for(int i = 1; i < 4; i++)
-            values[i] = aux[i-1];
-        values[0] = aux[3];
+    // option: 0 -> top, 1 -> right, 2 -> bottom, 3 -> left
+    pair<int, int> edge(int option, int rotation) {
+        pair<int, int> res = make_pair(values[rotation][option], values[rotation][(option + 1) % 4]);
+        if(option > 1)
+            return make_pair(res.second, res.first);
+        return res;
     }
 
-    bool match(piece& other, int option) {
-        if(other.values.size() == 0)
-            return true;
-        switch(option) {
-            case 0: // Check if the current left side = other right side
-                return values[0] == other.values[1] && values[3] == other.values[2];
-            case 1: // Check if the current right side = other left side
-                return values[1] == other.values[0] && values[2] == other.values[3];
-            case 2: // Check if the current top side = other bottom side
-                return values[0] == other.values[3] && values[1] == other.values[2];
-            case 3: // Check if the current bottom side = other top side
-                return values[3] == other.values[0] && values[2] == other.values[1];
-            default:
-                return false;
-        }
-    }
 };
 
 struct piece_comparator {
@@ -57,19 +51,21 @@ struct piece_comparator {
 void print_board(vector<vector<piece *>>& board, int r, int c) {
     for(int i = 0; i < r; i++) {
         for(int j = 0; j < c; j++) {
-            if(board[i][j]->values.size() == 0)
+            piece * p = board[i][j];
+            if(p->values.size() == 0)
                 cout << "_ _";
             else
-                cout << board[i][j]->values[0] << " " << board[i][j]->values[1];
+                cout << p->values[p->rotation][0] << " " << p->values[p->rotation][1];
             if(j < c - 1)
                 cout << "  ";
         }
         cout << endl;
         for(int j = 0; j < c; j++) {
-            if(board[i][j]->values.size() == 0)
+            piece * p = board[i][j];
+            if(p->values.size() == 0)
                 cout << "_ _";
             else
-                cout << board[i][j]->values[3] << " " << board[i][j]->values[2];
+                cout << p->values[p->rotation][3] << " " << p->values[p->rotation][2];
             if(j < c - 1)
                 cout << "  ";
         }
@@ -83,57 +79,6 @@ bool solved = false;
 
 piece * empty_piece = new piece();
 
-void bruteforce(map<piece, vector<piece *>, piece_comparator>& graph, vector<vector<piece*>>& board, int x, int y, int r, int c, int direction) {
-    // direction 0: left
-    // direction 1: right
-    if(solved)
-        return;
-    if((direction == 0 && x == r - 1 && y == c - 1) || (direction == 1 && x == r - 1 && y == 0)) {
-        solved = true;
-        return;
-    }
-
-    int nextX = x, nextY = y;
-    if(direction == 0) {
-        nextY++;
-        if(nextY >= c) {
-            nextX++;
-            nextY = c - 1;
-            direction = 1;
-        }
-    } else {
-        if(direction == 1) {
-            nextY--;
-            if(nextY < 0) {
-                nextX++;
-                nextY = 0;
-                direction = 0;
-            }
-        }
-    }
-
-    for(size_t i = 0; i < graph[*board[x][y]].size(); i++) {
-        piece * current_piece = graph[*board[x][y]][i];
-        if(!current_piece->used) {
-            for(int j = 0; j < 4; j++) {
-                if(current_piece->match(*board[max(nextX-1, 0)][nextY], 2) &&
-                    current_piece->match(*board[nextX][max(nextY - 1, 0)], 0) &&
-                    current_piece->match(*board[nextX][min(nextY + 1, c- 1)], 1)) {
-                    
-                    current_piece->used = true;
-                    board[nextX][nextY] = current_piece;
-                    bruteforce(graph, board, nextX, nextY, r, c, direction);
-                    if(solved)
-                        return;
-                    board[nextX][nextY] = empty_piece;
-                    current_piece->used = false;
-                }
-                current_piece->rotate();
-            }
-        }
-    }
-
-}
 
 int main() {
 
@@ -146,27 +91,30 @@ int main() {
 
         vector<piece> pieces(n);
         vector<vector<piece *>> board(r, vector<piece *>(c, empty_piece));
-        map<piece, vector<piece *>, piece_comparator> graph;
 
         for(int i = 0; i < n; i++) {
             cin >> w >> x >> y >> z;
             pieces[i] = piece(w, x, y, z, i);
-            graph[pieces[i]] = vector<piece *>();
+            
         }
-        
+
         for(int i = 0; i < n; i++){
-            for(int j = i + 1; j < n; j++){
-                for(int k = 0; k < 4; k++){
-                    if(pieces[i].match(pieces[j], 0) ||
-                        pieces[i].match(pieces[j], 1) ||
-                        pieces[i].match(pieces[j], 2) ||
-                        pieces[i].match(pieces[j], 3)) {
-
-                        graph[pieces[i]].push_back(&pieces[j]);
-                        graph[pieces[j]].push_back(&pieces[i]);
-
+            for(int j = 0; j < n; i++){
+                if(i != j) {
+                    for(int l = 0; l < 4; l++){ // rotation j
+                        if(pieces[i].edge(0, 0) == pieces[j].edge(2, l)) {
+                            pieces[i].adj[0].emplace_back(&pieces[j], l);
+                        }
+                        if(pieces[i].edge(1, 0) == pieces[j].edge(3, l)) {
+                            pieces[i].adj[1].emplace_back(&pieces[j], l);
+                        }
+                        if(pieces[i].edge(2, 0) == pieces[j].edge(0, l)) {
+                            pieces[i].adj[2].emplace_back(&pieces[j], l);
+                        }
+                        if(pieces[i].edge(3, 0) == pieces[j].edge(1, l)) {
+                            pieces[i].adj[3].emplace_back(&pieces[j], l);
+                        }
                     }
-                    pieces[i].rotate();
                 }
             }
         }
@@ -174,7 +122,6 @@ int main() {
         board[0][0] = &pieces[0];
         pieces[0].used = true;
 
-        bruteforce(graph, board, 0, 0, r, c, 0);
         
         if(solved) {
             print_board(board, r, c);

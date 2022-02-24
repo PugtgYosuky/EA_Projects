@@ -1,16 +1,16 @@
-from ast import expr_context
-import time
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 import random
 r_c = lambda: random.randint(0,255)
 
-plt.figure()
+f = plt.figure(figsize=(8, 8))
 plt.show(block=False)
 plt.pause(1)
 
 r, c = map(int, input().split())
+
+seconds_between_frames = 1 # Use 3 for small inputs, Use 0.001 for huge inputs
 
 unique_colors = {}
 used = []
@@ -50,6 +50,6 @@ while True:
         for piece in pieces:
             piece.draw()
         plt.show(block=False)
-        plt.pause(0.001)
+        plt.pause(seconds_between_frames)
     except Exception:
         plt.pause(20)
