@@ -70,15 +70,14 @@ void print_board(vector<vector<piece *>>& board, int r, int c) {
 }
 
 bool solved = false;
-
 piece * empty_piece = new piece();
 
-void bruteforce(vector<vector<piece *>>& board, int x, int y, int r, int c) {
-    // cout << x << ", " << y << endl;
+void bruteforce(vector<vector<piece *>>& board, vector<int>& colors, int x, int y, int r, int c) {
     if(x == r - 1 && y == c - 1) {
         solved = true;
         return;
     }
+
 
     // x = linha, y = coluna
     int nextX, nextY;
@@ -109,7 +108,7 @@ void bruteforce(vector<vector<piece *>>& board, int x, int y, int r, int c) {
                     board[nextX][nextY] = p.first;
                     p.first->rotation = p.second;
                     p.first->used = true;
-                    bruteforce(board, nextX, nextY, r, c);
+                    bruteforce(board, colors, nextX, nextY, r, c);
                     if(solved)
                         return;
                     p.first->used = false;
@@ -122,7 +121,7 @@ void bruteforce(vector<vector<piece *>>& board, int x, int y, int r, int c) {
                     board[nextX][nextY] = p.first;
                     p.first->rotation = p.second;
                     p.first->used = true;
-                    bruteforce(board, nextX, nextY, r, c);
+                    bruteforce(board, colors, nextX, nextY, r, c);
                     if(solved)
                         return;
                     p.first->used = false;
@@ -137,35 +136,45 @@ void bruteforce(vector<vector<piece *>>& board, int x, int y, int r, int c) {
             board[nextX][nextY] = adj.first;
             adj.first->rotation = adj.second;
             adj.first->used = true;
-            bruteforce(board, nextX, nextY, r, c);
+            bruteforce(board, colors, nextX, nextY, r, c);
             if(solved)
                 return;
             adj.first->used = false;
         }
     }
-
 }
 
 int main() {
 
     int t, n, r, c, w, x, y, z;
     cin >> t;
-
+    int count_odd;
+    
     while(t--) {
+        vector <int> colors (1000, 0);
         solved = false;
         cin >> n >> r >> c;
-
         vector<piece> pieces(n);
         vector<vector<piece *>> board(r, vector<piece *>(c, empty_piece));
 
         for(int i = 0; i < n; i++) {
             cin >> w >> x >> y >> z;
             pieces[i] = piece(w, x, y, z, i);
+            colors[w]++;
+            colors[x]++;
+            colors[y]++;
+            colors[z]++;
         }
+        
+        count_odd = 0;
+        for(int i = 0; i < 1000; i++)
+            count_odd += colors[i] % 2;
 
-        bool possible = true;
+        bool possible = count_odd <= 4;
 
         for(int i = 0; i < n; i++){
+            if(!possible)
+                break;
             for(int j = i + 1; j < n; j++){
                 for(int k = 0; k < 4; k++) {
                     for(int l = 0; l < 4; l++){
@@ -209,7 +218,7 @@ int main() {
         pieces[0].used = true;
         
         if(possible)
-            bruteforce(board, 0, 0, r, c);
+            bruteforce(board, colors, 0, 0, r, c);
         
         if(solved) {
             print_board(board, r, c);
