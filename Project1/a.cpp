@@ -208,7 +208,7 @@ int main() {
                     adj_count += pieces[i].adj[j][k].size();
                 }
             }
-            if(adj_count == 1) {
+            if(!adj_count) {
                 possible = false;
                 break;
             }
